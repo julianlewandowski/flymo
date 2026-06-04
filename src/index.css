@@ -14,9 +14,44 @@ body,
 
 body {
   margin: 0;
-  background-color: #0a0f14;
   color: #e6edf3;
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
     monospace;
   -webkit-font-smoothing: antialiased;
+
+  /* Subtle EFIS grid + vignette over the slate background. */
+  background-color: #0a0f14;
+  background-image:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(54, 214, 255, 0.06),
+      transparent 60%
+    ),
+    linear-gradient(rgba(36, 49, 64, 0.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(36, 49, 64, 0.25) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    40px 40px,
+    40px 40px;
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(255, 176, 0, 0.3);
+}
+
+/* Slim cockpit-styled scrollbar. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0f14;
+}
+::-webkit-scrollbar-thumb {
+  background: #243140;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #36475a;
 }
