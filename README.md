@@ -57,6 +57,32 @@ ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 expose the key to the browser. Get a key at
 <https://console.anthropic.com/>.
 
+## Infinite Flight integration (optional)
+
+flymo can prefill the form from your **active Infinite Flight session** so you
+type less. Enter your IFC username and hit **Pull from IF** — flymo looks up
+your live flight via the [Infinite Flight Live API](https://infiniteflight.com/guide/developer-reference/live-api)
+and fills in:
+
+- **Route** — departure/arrival ICAO from the filed flight-plan endpoints
+- **Aircraft + airline** — resolved from the flight's aircraft/livery
+- **Wind, OAT, active runway** — parsed best-effort from the departure/arrival
+  ATIS
+
+What it **can't** fill (and stays manual): runway length/elevation, weight,
+runway condition, and cruise preference.
+
+Requirements and caveats:
+
+- Set `INFINITE_FLIGHT_API_KEY` in `.env`. Request a key by emailing
+  `hello@infiniteflight.com` (see `docs/infinite-flight-api-request.md` for a
+  draft). Without the key the button returns a 503 and the rest of the app
+  works as before.
+- It only finds you while you're **spawned in on a live multiplayer server**
+  with a filed flight plan — solo/offline flights are invisible to the API.
+- ICAOs are inferred from the first/last flight-plan waypoints, and ATIS
+  parsing is heuristic — always sanity-check the prefilled values.
+
 ## Scripts
 
 | Command              | What it does                                      |
