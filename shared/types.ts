@@ -3,6 +3,12 @@
 /** Runway condition affects V-speeds and autobrake selection. */
 export type RunwayCondition = "dry" | "wet";
 
+/**
+ * Propulsion class. Drives how power is expressed (jet N1, turboprop
+ * torque/NP, piston throttle/RPM) and what cruise/altitude profile is realistic.
+ */
+export type Propulsion = "jet" | "turboprop" | "piston";
+
 /** Cruise preference: economy (slower, less fuel) or faster. */
 export type CruisePreference = "economy" | "fast";
 
