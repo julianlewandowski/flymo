@@ -4,6 +4,7 @@ import type {
   CruisePreference,
   RunwayCondition,
 } from "../../shared/types.ts";
+import { IF_AIRCRAFT } from "../../shared/aircraftCatalog.ts";
 
 interface BriefingFormProps {
   onSubmit: (req: BriefRequest) => void;
@@ -192,8 +193,17 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
             value={form.aircraftType}
             onChange={(e) => set("aircraftType", e.target.value)}
             placeholder="A330-300"
+            list="if-aircraft"
             required
           />
+          {/* Pick from the Infinite Flight civilian fleet, or type any model. */}
+          <datalist id="if-aircraft">
+            {IF_AIRCRAFT.map((a) => (
+              <option key={a.name} value={a.name}>
+                {a.category}
+              </option>
+            ))}
+          </datalist>
         </div>
         <div>
           <label className={labelCls}>Airline</label>
