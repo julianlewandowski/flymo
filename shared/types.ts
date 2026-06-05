@@ -32,6 +32,31 @@ export interface BriefRequest {
   cruisePreference?: CruisePreference;
 }
 
+/**
+ * Flight details pulled from a user's *active* Infinite Flight session via the
+ * Live API. Every field is optional: the API only knows what the pilot has set
+ * (a filed flight plan, the aircraft/livery they spawned with, ATIS weather),
+ * so the frontend pre-fills whatever is present and leaves the rest blank.
+ */
+export interface IfFlightImport {
+  /** First/last flight-plan waypoints, when they look like ICAO codes. */
+  departureIcao?: string;
+  arrivalIcao?: string;
+  /** Active runway parsed from the departure/arrival ATIS, when available. */
+  departureRunway?: string;
+  arrivalRunway?: string;
+  /** Resolved from the flight's aircraftId / liveryId. */
+  aircraftType?: string;
+  airline?: string;
+  /** Parsed from the departure ATIS readback. */
+  windDirectionDeg?: number;
+  windSpeedKt?: number;
+  oatC?: number;
+  /** Context shown to the user to confirm we matched the right flight. */
+  callsign?: string;
+  sessionName?: string;
+}
+
 export interface AircraftInfo {
   type: string;
   airline: string;

@@ -2,9 +2,11 @@ import { useState, type FormEvent } from "react";
 import type {
   BriefRequest,
   CruisePreference,
+  IfFlightImport,
   RunwayCondition,
 } from "../../shared/types.ts";
 import { IF_AIRCRAFT } from "../../shared/aircraftCatalog.ts";
+import { importFromInfiniteFlight } from "../api.ts";
 
 interface BriefingFormProps {
   onSubmit: (req: BriefRequest) => void;
@@ -63,11 +65,73 @@ function optNum(v: string): number | undefined {
   return v.trim() === "" ? undefined : Number(v);
 }
 
+/**
+ * Overlay an Infinite Flight import onto the form, touching only the fields the
+ * API actually returned (everything in IfFlightImport is optional). Numeric
+ * fields are stringified to match the controlled-input FormState.
+ */
+function applyImport(prev: FormState, imp: IfFlightImport): FormState {
+  // Only string-valued FormState keys are written here, so a string cast is
+  // sound (the select-backed keys are never passed in).
+  const next = { ...prev } as Record<keyof FormState, string>;
+  const setStr = (key: keyof FormState, v: string | undefined) => {
+    if (v != null && v !== "") next[key] = v;
+  };
+  const setNum = (key: keyof FormState, v: number | undefined) => {
+    if (v != null) next[key] = String(v);
+  };
+  setStr("departureIcao", imp.departureIcao);
+  setStr("arrivalIcao", imp.arrivalIcao);
+  setStr("departureRunway", imp.departureRunway);
+  setStr("arrivalRunway", imp.arrivalRunway);
+  setStr("aircraftType", imp.aircraftType);
+  setStr("airline", imp.airline);
+  setNum("windDirectionDeg", imp.windDirectionDeg);
+  setNum("windSpeedKt", imp.windSpeedKt);
+  setNum("oatC", imp.oatC);
+  return next as FormState;
+}
+
+/** One-line summary of what an import filled in, shown back to the user. */
+function importSummary(imp: IfFlightImport): string {
+  const route = [imp.departureIcao, imp.arrivalIcao].filter(Boolean).join(" → ");
+  const parts = [
+    [imp.aircraftType, imp.airline].filter(Boolean).join(" · "),
+    route,
+    imp.callsign,
+  ].filter(Boolean);
+  const where = imp.sessionName ? ` (${imp.sessionName})` : "";
+  return parts.length
+    ? `Imported ${parts.join(" · ")}${where}`
+    : `Found your flight${where}, but no details were available to import.`;
+}
+
 export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
   const [form, setForm] = useState<FormState>(DEFAULTS);
+  const [ifUsername, setIfUsername] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importNote, setImportNote] = useState<string | null>(null);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handlePull() {
+    const username = ifUsername.trim();
+    if (!username || importing) return;
+    setImporting(true);
+    setImportError(null);
+    setImportNote(null);
+    try {
+      const imp = await importFromInfiniteFlight(username);
+      setForm((prev) => applyImport(prev, imp));
+      setImportNote(importSummary(imp));
+    } catch (err) {
+      setImportError((err as Error).message);
+    } finally {
+      setImporting(false);
+    }
   }
 
   function handleSubmit(e: FormEvent) {
@@ -98,6 +162,43 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
       onSubmit={handleSubmit}
       className="rounded-xl border border-cockpit-border bg-cockpit-panel p-5 shadow-lg"
     >
+      <div className="mb-5 rounded-lg border border-cockpit-border bg-cockpit-bg/40 p-4">
+        <label className={labelCls}>Infinite Flight username</label>
+        <div className="mt-1 flex gap-2">
+          <input
+            className={inputCls + " mt-0 flex-1"}
+            value={ifUsername}
+            onChange={(e) => setIfUsername(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void handlePull();
+              }
+            }}
+            placeholder="Your IFC username"
+            autoComplete="off"
+          />
+          <button
+            type="button"
+            onClick={() => void handlePull()}
+            disabled={importing || ifUsername.trim() === ""}
+            className="shrink-0 rounded-md border border-cockpit-cyan/60 px-3 py-2 text-xs font-bold uppercase tracking-wider text-cockpit-cyan transition hover:bg-cockpit-cyan/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {importing ? "Pulling…" : "Pull from IF"}
+          </button>
+        </div>
+        <p className="mt-2 text-[11px] text-cockpit-muted">
+          Spawn in on a live server with a filed flight plan, then prefill the
+          form from your active flight.
+        </p>
+        {importNote && (
+          <p className="mt-2 text-[11px] text-cockpit-green">{importNote}</p>
+        )}
+        {importError && (
+          <p className="mt-2 text-[11px] text-red-300">{importError}</p>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className={labelCls}>Departure (ICAO)</label>
