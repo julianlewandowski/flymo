@@ -9,10 +9,10 @@ export const SYSTEM_PROMPT = `You are an airline performance / flight-operations
 Return ONLY a single JSON object (no markdown, no prose, no code fences) matching exactly this shape and key order:
 
 {
-  "aircraft": { "type": "", "airline": "", "engine": "", "engineNote": "" },
-  "takeoff": { "thrustMode": "", "flexTempC": 0, "n1Percent": "", "flapsConfig": "", "v1": 0, "vr": 0, "v2": 0, "notes": "" },
-  "climb": { "rotatePitch": "", "initialClimbSpeed": "", "thrustReductionAltAGL": 1500, "climbThrustN1": "", "flapRetractSchedule": "", "speedSchedule": "", "expectedVS": "" },
-  "cruise": { "recommendedFL": "", "mach": "", "cruiseN1": "", "fuelFlowTotal": "", "note": "" },
+  "aircraft": { "type": "", "airline": "", "category": "", "propulsion": "jet|turboprop|piston", "engine": "", "engineNote": "" },
+  "takeoff": { "thrustMode": "", "flexTempC": 0, "powerSetting": "", "flapsConfig": "", "v1": 0, "vr": 0, "v2": 0, "notes": "" },
+  "climb": { "rotatePitch": "", "initialClimbSpeed": "", "thrustReductionAltAGL": 1500, "climbPower": "", "flapRetractSchedule": "", "speedSchedule": "", "expectedVS": "" },
+  "cruise": { "recommendedFL": "", "cruiseSpeed": "", "cruisePower": "", "fuelFlowTotal": "", "note": "" },
   "descent": { "todDistanceNm": "", "descentSpeed": "", "targetVS": "" },
   "approachLanding": { "vls": 0, "vref": 0, "vapp": 0, "landingWeightEst": "", "flapSchedule": "", "approachSpeedLimits": "", "autobrake": "", "runwayExit": "", "ilsInfo": "" },
   "goAround": "",
@@ -20,7 +20,7 @@ Return ONLY a single JSON object (no markdown, no prose, no code fences) matchin
   "disclaimer": "Flight sim use only."
 }
 
-Numeric fields (flexTempC, v1, vr, v2, thrustReductionAltAGL, vls, vref, vapp) must be plain numbers. All other fields are short strings. Keep every note to 1-2 lines.
+"propulsion" must be exactly one of "jet", "turboprop", or "piston". "powerSetting", "climbPower", and "cruisePower" are propulsion-appropriate power readouts (jet: N1 %; turboprop: torque % + prop RPM/NP, and ITT if relevant; piston: throttle/MAP + RPM). "cruiseSpeed" is Mach for jets, or KIAS/KTAS for turboprops/pistons. Numeric fields (flexTempC, v1, vr, v2, thrustReductionAltAGL, vls, vref, vapp) must be plain numbers. All other fields are short strings. Keep every note to 1-2 lines.
 
 REFERENCE KNOWLEDGE — apply this so the numbers are realistic:
 

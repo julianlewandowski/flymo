@@ -35,14 +35,19 @@ export interface BriefRequest {
 export interface AircraftInfo {
   type: string;
   airline: string;
+  /** e.g. "Widebody jet", "Turboprop", "GA piston". */
+  category: string;
+  propulsion: Propulsion;
   engine: string;
   engineNote: string;
 }
 
 export interface TakeoffPhase {
   thrustMode: string;
+  /** Assumed-temperature (FLEX) value — jets only; 0/ignored otherwise. */
   flexTempC: number;
-  n1Percent: string;
+  /** Power readout: jet N1 %, turboprop torque/NP, or piston throttle/RPM. */
+  powerSetting: string;
   flapsConfig: string;
   v1: number;
   vr: number;
@@ -54,7 +59,8 @@ export interface ClimbPhase {
   rotatePitch: string;
   initialClimbSpeed: string;
   thrustReductionAltAGL: number;
-  climbThrustN1: string;
+  /** Climb power readout (propulsion-appropriate). */
+  climbPower: string;
   flapRetractSchedule: string;
   speedSchedule: string;
   expectedVS: string;
@@ -62,8 +68,10 @@ export interface ClimbPhase {
 
 export interface CruisePhase {
   recommendedFL: string;
-  mach: string;
-  cruiseN1: string;
+  /** Cruise speed: jet Mach, or turboprop/piston KIAS/KTAS. */
+  cruiseSpeed: string;
+  /** Cruise power readout (propulsion-appropriate). */
+  cruisePower: string;
   fuelFlowTotal: string;
   note: string;
 }

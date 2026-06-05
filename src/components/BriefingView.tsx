@@ -11,6 +11,8 @@ interface BriefingViewProps {
 /** Renders a briefing as phase cards in flight order, summary pinned on top. */
 export default function BriefingView({ briefing: b }: BriefingViewProps) {
   const [copied, setCopied] = useState(false);
+  // FLEX / assumed-temperature thrust only applies to jets.
+  const isJet = b.aircraft.propulsion === "jet";
 
   async function copy() {
     try {
@@ -36,7 +38,7 @@ export default function BriefingView({ briefing: b }: BriefingViewProps) {
         </button>
       </div>
 
-      <BriefingCard title="Aircraft & Engine" badge="info" accent="cyan">
+      <BriefingCard title="Aircraft & Engine" badge={b.aircraft.category} accent="cyan">
         <div className="grid grid-cols-2 gap-3">
           <Stat label="Type" value={b.aircraft.type} accent="cyan" />
           <Stat label="Airline" value={b.aircraft.airline} accent="cyan" />
@@ -56,8 +58,10 @@ export default function BriefingView({ briefing: b }: BriefingViewProps) {
           <Stat label="V2" value={b.takeoff.v2} big accent="green" />
         </div>
         <div className="mt-3 grid grid-cols-3 gap-3">
-          <Stat label="N1" value={b.takeoff.n1Percent} accent="amber" />
-          <Stat label="Flex °C" value={b.takeoff.flexTempC} accent="amber" />
+          <Stat label="Power" value={b.takeoff.powerSetting} accent="amber" />
+          {isJet && (
+            <Stat label="Flex °C" value={b.takeoff.flexTempC} accent="amber" />
+          )}
           <Stat label="Flaps" value={b.takeoff.flapsConfig} accent="amber" />
         </div>
         <p className="mt-3 text-sm text-cockpit-cyan">{b.takeoff.thrustMode}</p>
@@ -74,7 +78,7 @@ export default function BriefingView({ briefing: b }: BriefingViewProps) {
             label="Thr reduction"
             value={`${b.climb.thrustReductionAltAGL} ft AGL`}
           />
-          <Stat label="Climb N1" value={b.climb.climbThrustN1} accent="amber" />
+          <Stat label="Climb power" value={b.climb.climbPower} accent="amber" />
         </div>
         <dl className="mt-3 space-y-1 text-xs text-cockpit-muted">
           <Detail label="Flap retract" value={b.climb.flapRetractSchedule} />
@@ -86,8 +90,8 @@ export default function BriefingView({ briefing: b }: BriefingViewProps) {
       <BriefingCard title="Cruise" badge="3" accent="green">
         <div className="grid grid-cols-2 gap-3">
           <Stat label="Flight level" value={b.cruise.recommendedFL} big />
-          <Stat label="Mach" value={b.cruise.mach} big accent="cyan" />
-          <Stat label="Cruise N1" value={b.cruise.cruiseN1} accent="amber" />
+          <Stat label="Cruise speed" value={b.cruise.cruiseSpeed} big accent="cyan" />
+          <Stat label="Cruise power" value={b.cruise.cruisePower} accent="amber" />
           <Stat label="Fuel flow" value={b.cruise.fuelFlowTotal} accent="amber" />
         </div>
         {b.cruise.note && (
