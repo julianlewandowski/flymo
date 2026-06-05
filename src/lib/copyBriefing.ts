@@ -8,14 +8,17 @@ export function briefingToText(b: Briefing): string {
   L.push("");
 
   L.push("AIRCRAFT & ENGINE");
-  L.push(`  ${b.aircraft.type} · ${b.aircraft.airline}`);
+  L.push(`  ${b.aircraft.type} · ${b.aircraft.airline} (${b.aircraft.category})`);
   L.push(`  Engine: ${b.aircraft.engine}`);
   if (b.aircraft.engineNote) L.push(`  Note: ${b.aircraft.engineNote}`);
   L.push("");
 
+  const isJet = b.aircraft.propulsion === "jet";
   L.push("TAKEOFF");
   L.push(`  Thrust: ${b.takeoff.thrustMode}`);
-  L.push(`  Flex temp: ${b.takeoff.flexTempC}°C · N1: ${b.takeoff.n1Percent}`);
+  L.push(
+    `  ${isJet ? `Flex temp: ${b.takeoff.flexTempC}°C · ` : ""}Power: ${b.takeoff.powerSetting}`,
+  );
   L.push(`  Flaps: ${b.takeoff.flapsConfig}`);
   L.push(`  V1 ${b.takeoff.v1} · VR ${b.takeoff.vr} · V2 ${b.takeoff.v2}`);
   if (b.takeoff.notes) L.push(`  ${b.takeoff.notes}`);
@@ -24,15 +27,15 @@ export function briefingToText(b: Briefing): string {
   L.push("CLIMB");
   L.push(`  Rotate: ${b.climb.rotatePitch} · Initial: ${b.climb.initialClimbSpeed}`);
   L.push(`  Thrust reduction: ${b.climb.thrustReductionAltAGL} ft AGL`);
-  L.push(`  Climb N1: ${b.climb.climbThrustN1}`);
+  L.push(`  Climb power: ${b.climb.climbPower}`);
   L.push(`  Flap retract: ${b.climb.flapRetractSchedule}`);
   L.push(`  Speed: ${b.climb.speedSchedule}`);
   L.push(`  VS: ${b.climb.expectedVS}`);
   L.push("");
 
   L.push("CRUISE");
-  L.push(`  ${b.cruise.recommendedFL} · ${b.cruise.mach}`);
-  L.push(`  N1: ${b.cruise.cruiseN1} · Fuel flow: ${b.cruise.fuelFlowTotal}`);
+  L.push(`  ${b.cruise.recommendedFL} · ${b.cruise.cruiseSpeed}`);
+  L.push(`  Power: ${b.cruise.cruisePower} · Fuel flow: ${b.cruise.fuelFlowTotal}`);
   if (b.cruise.note) L.push(`  ${b.cruise.note}`);
   L.push("");
 
