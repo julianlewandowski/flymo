@@ -2,9 +2,14 @@
 
 A flight-sim **takeoff-to-landing performance briefing** generator. Enter your
 flight details and flymo asks Claude Sonnet to compute a complete, phase-by-phase
-briefing — V-speeds, thrust settings, climb/cruise/descent profiles, approach
+briefing — V-speeds, power settings, climb/cruise/descent profiles, approach
 numbers, autobrake, and go-around — rendered as a clean "glass cockpit" set of
 cards.
+
+It covers the **civilian Infinite Flight fleet** across propulsion types — jets
+(N1 / FLEX / Mach), turboprops (torque + prop RPM, KIAS/KTAS cruise, beta/reverse),
+and GA pistons (throttle/RPM, no V1/V2) — and adapts every readout to the aircraft
+you pick. Military aircraft are intentionally out of scope.
 
 > ⚠️ **For flight simulation use only — not for real-world navigation.**
 
@@ -73,6 +78,10 @@ Departure/arrival ICAO, runway + length (+ optional elevation), aircraft type,
 airline (used to infer the engine variant), weight, OAT, runway condition, and
 optional wind and cruise preference. Sensible defaults are pre-filled
 (LPFR → EIDW, Aer Lingus A330-300) so you can generate a briefing immediately.
+
+The aircraft field offers the Infinite Flight civilian fleet as a picker (jets,
+turboprops, and GA pistons) — but you can type any model. The briefing's power
+and speed readouts adapt to the aircraft's propulsion class.
 
 ## Disclaimer
 
