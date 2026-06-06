@@ -4,7 +4,7 @@ import type { BriefRequest, RunwayCondition } from "../shared/types.ts";
 import { SYSTEM_PROMPT, buildUserMessage } from "./prompt.ts";
 
 const MODEL = "claude-sonnet-4-20250514";
-const MAX_TOKENS = 2000;
+const MAX_TOKENS = 4000;
 
 // Lazily created so the server can boot (and serve /api/health) even if the
 // key is missing — we only error when an actual briefing is requested.
