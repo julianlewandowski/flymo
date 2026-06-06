@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Briefing } from "../../shared/types.ts";
+import type { Briefing, Reasoning } from "../../shared/types.ts";
 import { briefingToText } from "../lib/copyBriefing.ts";
 import BriefingCard from "./BriefingCard.tsx";
 import Stat from "./Stat.tsx";
@@ -38,6 +38,8 @@ export default function BriefingView({ briefing: b }: BriefingViewProps) {
         </button>
       </div>
 
+      <ReasoningPanel reasoning={b.reasoning} />
+
       <BriefingCard title="Aircraft & Engine" badge={b.aircraft.category} accent="cyan">
         <div className="grid grid-cols-2 gap-3">
           <Stat label="Type" value={b.aircraft.type} accent="cyan" />
@@ -65,6 +67,11 @@ export default function BriefingView({ briefing: b }: BriefingViewProps) {
           <Stat label="Flaps" value={b.takeoff.flapsConfig} accent="amber" />
         </div>
         <p className="mt-3 text-sm text-cockpit-cyan">{b.takeoff.thrustMode}</p>
+        {b.takeoff.trimSetting && (
+          <dl className="mt-2 space-y-1 text-xs text-cockpit-muted">
+            <Detail label="Takeoff Trim" value={b.takeoff.trimSetting} />
+          </dl>
+        )}
         {b.takeoff.notes && (
           <p className="mt-1 text-xs text-cockpit-muted">{b.takeoff.notes}</p>
         )}
@@ -99,9 +106,7 @@ export default function BriefingView({ briefing: b }: BriefingViewProps) {
             <span className="text-[10px] uppercase tracking-wider text-cockpit-cyan">
               Step climb
             </span>
-            <p className="mt-0.5 text-sm text-cockpit-green">
-              {b.cruise.stepClimb.schedule}
-            </p>
+            <StepSequence schedule={b.cruise.stepClimb.schedule} />
           </div>
         ) : (
           b.cruise.stepClimb.schedule && (
@@ -135,6 +140,12 @@ export default function BriefingView({ briefing: b }: BriefingViewProps) {
             label="Landing weight"
             value={b.approachLanding.landingWeightEst}
           />
+          {b.approachLanding.trimLanding && (
+            <Detail
+              label="Landing Trim (running)"
+              value={b.approachLanding.trimLanding}
+            />
+          )}
           <Detail label="Flaps" value={b.approachLanding.flapSchedule} />
           {b.approachLanding.approachSpeedLimits && (
             <Detail
@@ -171,6 +182,90 @@ function Detail({ label, value }: { label: string; value: string }) {
         {label}:
       </dt>
       <dd className="text-cockpit-green/90">{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * Render a step-climb schedule as a horizontal sequence of FL chips. The model
+ * writes steps separated by arrows (e.g. "FL340 now → FL360 after ~2h"); if it
+ * doesn't, we fall back to showing the schedule as a single chip.
+ */
+function StepSequence({ schedule }: { schedule: string }) {
+  const steps = schedule
+    .split(/→|->/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+      {steps.map((step, i) => (
+        <span key={i} className="flex items-center gap-1.5">
+          {i > 0 && (
+            <span className="text-cockpit-cyan/60" aria-hidden>
+              →
+            </span>
+          )}
+          <span className="rounded-md border border-cockpit-cyan/30 bg-cockpit-bg/50 px-2 py-1 text-xs font-bold tabular-nums text-cockpit-green">
+            {step}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// Reasoning sub-fields in the order they're shown, with display labels.
+const REASONING_ROWS: ReadonlyArray<[keyof Reasoning, string]> = [
+  ["weightPctMtow", "Weight vs MTOW"],
+  ["mtow", "MTOW"],
+  ["powerMargin", "Power margin / FLEX"],
+  ["takeoffPowerDerived", "Takeoff power logic"],
+  ["initialCruiseLevel", "Initial cruise level"],
+  ["stepClimbRationale", "Step climb"],
+  ["fuelBurnEstimate", "Fuel burn estimate"],
+  ["landingWeightDerived", "Landing weight"],
+  ["propulsionNote", "Propulsion"],
+];
+
+/**
+ * Collapsible, secondary "Show workings" panel exposing the model's reasoning.
+ * Collapsed by default and styled smaller/dimmer than the phase cards so it
+ * reads as diagnostic detail rather than primary briefing content.
+ */
+function ReasoningPanel({ reasoning }: { reasoning: Reasoning }) {
+  const [open, setOpen] = useState(false);
+  const rows = REASONING_ROWS.filter(([key]) => reasoning[key]?.trim());
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border border-cockpit-border/60 bg-cockpit-panel/40">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-[11px] uppercase tracking-wider text-cockpit-muted hover:text-cockpit-cyan"
+      >
+        <span>Show workings</span>
+        <span
+          className={`transition-transform ${open ? "rotate-90" : ""}`}
+          aria-hidden
+        >
+          ▸
+        </span>
+      </button>
+      {open && (
+        <dl className="space-y-1.5 border-t border-cockpit-border/60 px-3 py-3 text-[11px] leading-relaxed">
+          {rows.map(([key, label]) => (
+            <div key={key} className="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
+              <dt className="shrink-0 uppercase tracking-wider text-cockpit-muted/60 sm:w-40">
+                {label}
+              </dt>
+              <dd className="text-cockpit-muted">{reasoning[key]}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </div>
   );
 }

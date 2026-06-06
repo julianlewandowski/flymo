@@ -57,6 +57,33 @@ export interface IfFlightImport {
   sessionName?: string;
 }
 
+/**
+ * The model's chain-of-thought, derived FIRST and treated as the source of
+ * truth for every other field. Surfaced in the UI as a collapsible, secondary
+ * "Show workings" panel. All fields are short free-text strings, propulsion-
+ * aware (FLEX/N1 for jets, torque/throttle for turboprop/piston).
+ */
+export interface Reasoning {
+  /** Aircraft MTOW (max gross weight for GA) in tonnes. */
+  mtow: string;
+  /** Takeoff weight as a % of MTOW, with the division shown. */
+  weightPctMtow: string;
+  /** Power margin: jet FLEX headroom, or turboprop/piston derate sense. */
+  powerMargin: string;
+  /** Takeoff power that follows from the margin (matches takeoff.powerSetting). */
+  takeoffPowerDerived: string;
+  /** Initial cruise level from the weight band (matches cruise.recommendedFL). */
+  initialCruiseLevel: string;
+  /** Whether a step climb is worthwhile, and the trigger weights/timing. */
+  stepClimbRationale: string;
+  /** Sector fuel burn estimate, with the working shown. */
+  fuelBurnEstimate: string;
+  /** Landing weight = takeoff weight − burn, checked against MLW. */
+  landingWeightDerived: string;
+  /** Propulsion class and what it means for the power readouts. */
+  propulsionNote: string;
+}
+
 export interface AircraftInfo {
   type: string;
   airline: string;
@@ -73,6 +100,8 @@ export interface TakeoffPhase {
   flexTempC: number;
   /** Power readout: jet N1 %, turboprop torque/NP, or piston throttle/RPM. */
   powerSetting: string;
+  /** Takeoff trim preset: Airbus THS°, Boeing stab units, or GA elevator trim. */
+  trimSetting: string;
   flapsConfig: string;
   v1: number;
   vr: number;
@@ -124,6 +153,8 @@ export interface ApproachLandingPhase {
   vref: number;
   vapp: number;
   landingWeightEst: string;
+  /** Running stabilizer/trim value on stable final (not a preset). */
+  trimLanding: string;
   flapSchedule: string;
   approachSpeedLimits: string;
   autobrake: string;
@@ -133,6 +164,7 @@ export interface ApproachLandingPhase {
 
 /** The full briefing returned by Claude, rendered as phase cards. */
 export interface Briefing {
+  reasoning: Reasoning;
   aircraft: AircraftInfo;
   takeoff: TakeoffPhase;
   climb: ClimbPhase;
