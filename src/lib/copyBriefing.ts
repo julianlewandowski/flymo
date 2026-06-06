@@ -36,6 +36,11 @@ export function briefingToText(b: Briefing): string {
   L.push("CRUISE");
   L.push(`  ${b.cruise.recommendedFL} · ${b.cruise.cruiseSpeed}`);
   L.push(`  Power: ${b.cruise.cruisePower} · Fuel flow: ${b.cruise.fuelFlowTotal}`);
+  if (b.cruise.stepClimb.recommended) {
+    L.push(`  Step climb: ${b.cruise.stepClimb.schedule}`);
+  } else if (b.cruise.stepClimb.schedule) {
+    L.push(`  Step climb: not required — ${b.cruise.stepClimb.schedule}`);
+  }
   if (b.cruise.note) L.push(`  ${b.cruise.note}`);
   L.push("");
 

@@ -12,7 +12,7 @@ Return ONLY a single JSON object (no markdown, no prose, no code fences) matchin
   "aircraft": { "type": "", "airline": "", "category": "", "propulsion": "jet|turboprop|piston", "engine": "", "engineNote": "" },
   "takeoff": { "thrustMode": "", "flexTempC": 0, "powerSetting": "", "flapsConfig": "", "v1": 0, "vr": 0, "v2": 0, "notes": "" },
   "climb": { "rotatePitch": "", "initialClimbSpeed": "", "thrustReductionAltAGL": 1500, "climbPower": "", "flapRetractSchedule": "", "speedSchedule": "", "expectedVS": "" },
-  "cruise": { "recommendedFL": "", "cruiseSpeed": "", "cruisePower": "", "fuelFlowTotal": "", "note": "" },
+  "cruise": { "recommendedFL": "", "cruiseSpeed": "", "cruisePower": "", "fuelFlowTotal": "", "stepClimb": { "recommended": false, "schedule": "" }, "note": "" },
   "descent": { "todDistanceNm": "", "descentSpeed": "", "targetVS": "" },
   "approachLanding": { "vls": 0, "vref": 0, "vapp": 0, "landingWeightEst": "", "flapSchedule": "", "approachSpeedLimits": "", "autobrake": "", "runwayExit": "", "ilsInfo": "" },
   "goAround": "",
@@ -20,7 +20,7 @@ Return ONLY a single JSON object (no markdown, no prose, no code fences) matchin
   "disclaimer": "Flight sim use only."
 }
 
-"propulsion" must be exactly one of "jet", "turboprop", or "piston". "powerSetting", "climbPower", and "cruisePower" are propulsion-appropriate power readouts (jet: N1 %; turboprop: torque % + prop RPM/NP, and ITT if relevant; piston: throttle/MAP + RPM). "cruiseSpeed" is Mach for jets, or KIAS/KTAS for turboprops/pistons. Numeric fields (flexTempC, v1, vr, v2, thrustReductionAltAGL, vls, vref, vapp) must be plain numbers. All other fields are short strings. Keep every note to 1-2 lines.
+"propulsion" must be exactly one of "jet", "turboprop", or "piston". "powerSetting", "climbPower", and "cruisePower" are propulsion-appropriate power readouts (jet: N1 %; turboprop: torque % + prop RPM/NP, and ITT if relevant; piston: throttle/MAP + RPM). "cruiseSpeed" is Mach for jets, or KIAS/KTAS for turboprops/pistons. Numeric fields (flexTempC, v1, vr, v2, thrustReductionAltAGL, vls, vref, vapp) must be plain numbers. "cruise.stepClimb.recommended" is a boolean. All other fields are short strings. Keep every note to 1-2 lines.
 
 STEP 1 — CLASSIFY THE AIRCRAFT. From the type (and the Infinite Flight fleet below) set "category" and "propulsion", then apply the matching profile. Every power/speed readout MUST use units appropriate to that propulsion class.
 
@@ -40,19 +40,22 @@ JETS:
 - Takeoff: if weight is well below MTOW and the runway is adequate, recommend a FLEX/assumed-temperature takeoff (lower N1, ~88-92%) and pick a realistic flex temp. Use TOGA (~99-102% N1) only when performance-limited (short/wet/heavy/high/hot).
 - V-speed anchor: A330-300 at ~170-180 t, Config 1+F -> V1~140, VR~147, V2~152 kt; scale for weight/flap/altitude/temp (heavier/hotter/higher = faster). Smaller jets (A320/737) ~125-150 kt; regional jets (CRJ/E-jet) ~120-140 kt.
 - Climb: rotate ~15 deg, climb at V2+10 initially, thrust reduction at 1,500 ft AGL (FLX->CLB), retract flaps on the S/F schedule (clean by F-speed), 250 kt <10,000 ft then 300 kt / M.80, VS tapers with altitude.
-- Cruise: choose FL by weight + sector length; cruiseSpeed in Mach (M.80 economy or M.82 faster). Descent: TOD ~ 3 x (cruise alt in thousands of ft) nm + buffer; M.80/300 kt then 250 kt <10,000 ft.
+- Cruise: choose the initial FL by weight + sector length; cruiseSpeed in Mach (M.80 economy or M.82 faster). Descent: TOD ~ 3 x (cruise alt in thousands of ft) nm + buffer; M.80/300 kt then 250 kt <10,000 ft.
+- Step climb: as fuel burns off the optimum altitude rises (~2,000 ft per ~10-15 t burned, roughly one step every 1.5-2 h). On longer sectors recommend a step-climb schedule (set stepClimb.recommended true) with specific FLs/timing in 2,000 ft steps from the initial FL toward the aircraft's ceiling, respecting RVSM even/odd levels for the cruise track. On short sectors (no real cruise / not enough time to climb and descend) set stepClimb.recommended false and briefly say why. Keep the schedule consistent with recommendedFL (recommendedFL is the initial level).
 - Autobrake: LOW for a long dry runway + light jet; MED if wet/short/heavy. Justify with runway length + condition + weight.
 
 TURBOPROPS (Dash 8 Q400, TBM-930, C208):
 - NO FLEX and NO Mach: set flexTempC 0 and note "FLEX N/A" in takeoff.notes; cruiseSpeed in KIAS/KTAS. Power = torque % (+ prop RPM/NP) and watch ITT; condition levers MAX for takeoff/landing. Use rated/normal takeoff power (and derate only if light + long runway).
 - Lower ceilings/speeds: Q400 ~FL230-250, ~280-285 KTAS, climb ~160-210 KIAS, V1/VR/V2 ~120-130 kt at typical weight; TBM-930 ~FL280-310, ~290-330 KTAS, rotate ~85-90 KIAS; C208 ~FL100-180, ~160-175 KTAS, rotate ~70 KIAS. Still 250 kt <10,000 ft where applicable.
 - Landing: VREF lower (Q400 ~120-130, TBM ~85, C208 ~75 kt). Q400 has NO autobrake (manual braking + ground-beta/reverse) — say so; TBM/C208 use manual braking + beta/reverse. Only state an autobrake setting if the type actually has one.
+- Step climb: usually not needed (short sectors, low cruise altitudes) — set stepClimb.recommended false with a brief reason. Recommend it only for an unusually long, high TBM-930 leg.
 
 PISTONS / GA (Cessna 172, CubCrafters XCub):
 - NO V1/V2, NO FLEX, NO Mach, NO autobrake. Power = throttle + RPM (+ manifold pressure where applicable). Use VR for rotation and set v1 and v2 equal to vr; note in takeoff.notes that V1/V2 do not apply to light singles.
 - Altitudes are low: give recommendedFL as a plain altitude (e.g. "5,500 ft"), not a flight level; speeds in KIAS; fuel flow in GPH.
 - Cessna 172: full throttle ~2700 RPM takeoff, rotate ~55 KIAS, climb Vy ~74 KIAS, cruise ~2300-2500 RPM / ~110-120 KIAS, approach ~65 KIAS, short final ~60-65; manual braking. XCub: STOL bush plane, full throttle takeoff, rotate ~40-50 KIAS, climb ~60-70, cruise ~110-125 KIAS; manual braking.
 - Descent: gentle; the 3x rule still works but distances are small.
+- Step climb: never applicable — set stepClimb.recommended false (light piston, single VFR altitude).
 
 This is for flight simulation only — it must not be used for real-world navigation. Always set "disclaimer" to "Flight sim use only.".`;
 

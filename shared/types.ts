@@ -98,7 +98,19 @@ export interface CruisePhase {
   /** Cruise power readout (propulsion-appropriate). */
   cruisePower: string;
   fuelFlowTotal: string;
+  /** Step-climb guidance as weight burns off (mainly long-haul jets). */
+  stepClimb: StepClimb;
   note: string;
+}
+
+/** Whether a step climb is worthwhile for this sector, and the schedule. */
+export interface StepClimb {
+  recommended: boolean;
+  /**
+   * When recommended: the step schedule (e.g. "FL360 now → FL380 after ~2h →
+   * FL400 late cruise"). When not: a one-line reason (short sector, turboprop).
+   */
+  schedule: string;
 }
 
 export interface DescentPhase {
