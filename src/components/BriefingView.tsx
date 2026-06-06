@@ -94,6 +94,23 @@ export default function BriefingView({ briefing: b }: BriefingViewProps) {
           <Stat label="Cruise power" value={b.cruise.cruisePower} accent="amber" />
           <Stat label="Fuel flow" value={b.cruise.fuelFlowTotal} accent="amber" />
         </div>
+        {b.cruise.stepClimb.recommended ? (
+          <div className="mt-3 rounded-lg border border-cockpit-cyan/40 bg-cockpit-cyan/10 px-3 py-2">
+            <span className="text-[10px] uppercase tracking-wider text-cockpit-cyan">
+              Step climb
+            </span>
+            <p className="mt-0.5 text-sm text-cockpit-green">
+              {b.cruise.stepClimb.schedule}
+            </p>
+          </div>
+        ) : (
+          b.cruise.stepClimb.schedule && (
+            <p className="mt-3 text-xs text-cockpit-muted">
+              <span className="uppercase tracking-wider">Step climb:</span> not
+              required — {b.cruise.stepClimb.schedule}
+            </p>
+          )
+        )}
         {b.cruise.note && (
           <p className="mt-3 text-xs text-cockpit-muted">{b.cruise.note}</p>
         )}
