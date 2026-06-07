@@ -1,6 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Request, Response } from "express";
-import type { BriefRequest, RunwayCondition } from "../shared/types.ts";
+import type {
+  BriefRequest,
+  Briefing,
+  Propulsion,
+  RunwayCondition,
+} from "../shared/types.ts";
 import { SYSTEM_PROMPT, buildUserMessage } from "./prompt.ts";
 
 const MODEL = "claude-sonnet-4-20250514";
@@ -141,6 +146,112 @@ function extractJson(raw: string): unknown {
   }
 }
 
+// --- Response normalization -------------------------------------------------
+// The frontend reads deeply nested fields (b.reasoning[...], b.cruise.stepClimb
+// .recommended, ...) without guards. Models occasionally omit a field or a whole
+// section; coerce the parsed JSON into a complete, well-typed Briefing with safe
+// defaults so a slightly-off response degrades gracefully instead of crashing.
+
+function asObj(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+}
+function asStr(v: unknown): string {
+  return typeof v === "string" ? v : v == null ? "" : String(v);
+}
+function asNum(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+function asPropulsion(v: unknown): Propulsion {
+  return v === "turboprop" || v === "piston" ? v : "jet";
+}
+
+/** Coerce arbitrary parsed JSON into a complete Briefing with safe defaults. */
+function normalizeBriefing(parsed: unknown): Briefing {
+  const b = asObj(parsed);
+  const reasoning = asObj(b.reasoning);
+  const aircraft = asObj(b.aircraft);
+  const takeoff = asObj(b.takeoff);
+  const climb = asObj(b.climb);
+  const cruise = asObj(b.cruise);
+  const stepClimb = asObj(cruise.stepClimb);
+  const descent = asObj(b.descent);
+  const approach = asObj(b.approachLanding);
+
+  return {
+    reasoning: {
+      mtow: asStr(reasoning.mtow),
+      weightPctMtow: asStr(reasoning.weightPctMtow),
+      powerMargin: asStr(reasoning.powerMargin),
+      takeoffPowerDerived: asStr(reasoning.takeoffPowerDerived),
+      initialCruiseLevel: asStr(reasoning.initialCruiseLevel),
+      stepClimbRationale: asStr(reasoning.stepClimbRationale),
+      fuelBurnEstimate: asStr(reasoning.fuelBurnEstimate),
+      landingWeightDerived: asStr(reasoning.landingWeightDerived),
+      propulsionNote: asStr(reasoning.propulsionNote),
+    },
+    aircraft: {
+      type: asStr(aircraft.type),
+      airline: asStr(aircraft.airline),
+      category: asStr(aircraft.category),
+      propulsion: asPropulsion(aircraft.propulsion),
+      engine: asStr(aircraft.engine),
+      engineNote: asStr(aircraft.engineNote),
+    },
+    takeoff: {
+      thrustMode: asStr(takeoff.thrustMode),
+      flexTempC: asNum(takeoff.flexTempC),
+      powerSetting: asStr(takeoff.powerSetting),
+      trimSetting: asStr(takeoff.trimSetting),
+      flapsConfig: asStr(takeoff.flapsConfig),
+      v1: asNum(takeoff.v1),
+      vr: asNum(takeoff.vr),
+      v2: asNum(takeoff.v2),
+      notes: asStr(takeoff.notes),
+    },
+    climb: {
+      rotatePitch: asStr(climb.rotatePitch),
+      initialClimbSpeed: asStr(climb.initialClimbSpeed),
+      thrustReductionAltAGL: asNum(climb.thrustReductionAltAGL),
+      climbPower: asStr(climb.climbPower),
+      flapRetractSchedule: asStr(climb.flapRetractSchedule),
+      speedSchedule: asStr(climb.speedSchedule),
+      expectedVS: asStr(climb.expectedVS),
+    },
+    cruise: {
+      recommendedFL: asStr(cruise.recommendedFL),
+      cruiseSpeed: asStr(cruise.cruiseSpeed),
+      cruisePower: asStr(cruise.cruisePower),
+      fuelFlowTotal: asStr(cruise.fuelFlowTotal),
+      stepClimb: {
+        recommended: stepClimb.recommended === true,
+        schedule: asStr(stepClimb.schedule),
+      },
+      note: asStr(cruise.note),
+    },
+    descent: {
+      todDistanceNm: asStr(descent.todDistanceNm),
+      descentSpeed: asStr(descent.descentSpeed),
+      targetVS: asStr(descent.targetVS),
+    },
+    approachLanding: {
+      vls: asNum(approach.vls),
+      vref: asNum(approach.vref),
+      vapp: asNum(approach.vapp),
+      landingWeightEst: asStr(approach.landingWeightEst),
+      trimLanding: asStr(approach.trimLanding),
+      flapSchedule: asStr(approach.flapSchedule),
+      approachSpeedLimits: asStr(approach.approachSpeedLimits),
+      autobrake: asStr(approach.autobrake),
+      runwayExit: asStr(approach.runwayExit),
+      ilsInfo: asStr(approach.ilsInfo),
+    },
+    goAround: asStr(b.goAround),
+    summaryLine: asStr(b.summaryLine),
+    disclaimer: asStr(b.disclaimer) || "Flight sim use only.",
+  };
+}
+
 /** POST /api/brief — proxy that turns flight inputs into a Claude briefing. */
 export async function handleBrief(req: Request, res: Response): Promise<void> {
   let input: BriefRequest;
@@ -176,7 +287,7 @@ export async function handleBrief(req: Request, res: Response): Promise<void> {
       throw new Error("The model returned an empty response. Please try again.");
     }
 
-    const briefing = extractJson(text);
+    const briefing = normalizeBriefing(extractJson(text));
     res.json(briefing);
   } catch (err) {
     console.error("[flymo] briefing failed:", err);
