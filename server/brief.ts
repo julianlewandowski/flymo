@@ -19,8 +19,36 @@ function getClient(): Anthropic {
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY is not set in the server environment");
   }
-  if (!client) client = new Anthropic({ apiKey });
+  if (!client) {
+    // Bound each attempt so a hung connection can't stall the request forever;
+    // the SDK still retries transient failures up to maxRetries.
+    client = new Anthropic({ apiKey, timeout: 90_000, maxRetries: 2 });
+  }
   return client;
+}
+
+/** Map an error from the briefing pipeline to an HTTP status + clear message. */
+function describeError(err: unknown): { status: number; message: string } {
+  if (err instanceof Anthropic.APIConnectionTimeoutError) {
+    return { status: 504, message: "The model request timed out. Please try again." };
+  }
+  if (err instanceof Anthropic.APIError) {
+    if (err.status === 429) {
+      return {
+        status: 429,
+        message: "The model API is rate limited. Please wait a moment and try again.",
+      };
+    }
+    if (err.status != null && err.status >= 500) {
+      return {
+        status: 503,
+        message: "The model is temporarily unavailable. Please try again.",
+      };
+    }
+    return { status: 502, message: "Could not reach the model API. Please try again." };
+  }
+  // Our own thrown errors (validation, truncation, parse) already carry a clear message.
+  return { status: 502, message: (err as Error).message };
 }
 
 /** Throws with a human-readable message if the field is missing/blank. */
@@ -291,6 +319,7 @@ export async function handleBrief(req: Request, res: Response): Promise<void> {
     res.json(briefing);
   } catch (err) {
     console.error("[flymo] briefing failed:", err);
-    res.status(502).json({ error: (err as Error).message });
+    const { status, message } = describeError(err);
+    res.status(status).json({ error: message });
   }
 }
