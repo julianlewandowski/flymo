@@ -237,6 +237,8 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
             <input
               className={inputCls}
               type="number"
+              min={1}
+              max={30000}
               value={form.departureRunwayLengthFt}
               onChange={(e) => set("departureRunwayLengthFt", e.target.value)}
               required
@@ -247,6 +249,8 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
             <input
               className={inputCls}
               type="number"
+              min={-1500}
+              max={30000}
               value={form.departureElevationFt}
               onChange={(e) => set("departureElevationFt", e.target.value)}
               placeholder="opt"
@@ -270,6 +274,8 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
             <input
               className={inputCls}
               type="number"
+              min={1}
+              max={30000}
               value={form.arrivalRunwayLengthFt}
               onChange={(e) => set("arrivalRunwayLengthFt", e.target.value)}
               required
@@ -280,6 +286,8 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
             <input
               className={inputCls}
               type="number"
+              min={-1500}
+              max={30000}
               value={form.arrivalElevationFt}
               onChange={(e) => set("arrivalElevationFt", e.target.value)}
               placeholder="opt"
@@ -323,6 +331,9 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
             <input
               className={inputCls}
               type="number"
+              min={0.1}
+              max={600}
+              step={0.1}
               value={form.weightTonnes}
               onChange={(e) => set("weightTonnes", e.target.value)}
               required
@@ -333,6 +344,8 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
             <input
               className={inputCls}
               type="number"
+              min={-90}
+              max={60}
               value={form.oatC}
               onChange={(e) => set("oatC", e.target.value)}
               required
@@ -375,6 +388,8 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
             <input
               className={inputCls}
               type="number"
+              min={0}
+              max={360}
               value={form.windDirectionDeg}
               onChange={(e) => set("windDirectionDeg", e.target.value)}
               placeholder="opt"
@@ -385,6 +400,8 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
             <input
               className={inputCls}
               type="number"
+              min={0}
+              max={250}
               value={form.windSpeedKt}
               onChange={(e) => set("windSpeedKt", e.target.value)}
               placeholder="opt"
