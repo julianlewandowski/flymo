@@ -130,7 +130,15 @@ function extractJson(raw: string): unknown {
   if (start === -1 || end === -1 || end < start) {
     throw new Error("No JSON object found in model response");
   }
-  return JSON.parse(text.slice(start, end + 1));
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch {
+    // Usually truncated or otherwise malformed output — give a clear,
+    // actionable message rather than a raw "Unexpected token" parse error.
+    throw new Error(
+      "The model returned a malformed briefing. Please try again.",
+    );
+  }
 }
 
 /** POST /api/brief — proxy that turns flight inputs into a Claude briefing. */
@@ -151,10 +159,22 @@ export async function handleBrief(req: Request, res: Response): Promise<void> {
       messages: [{ role: "user", content: buildUserMessage(input) }],
     });
 
+    // A max_tokens stop means the JSON is almost certainly cut off mid-object;
+    // fail fast with guidance rather than letting the parse blow up obscurely.
+    if (message.stop_reason === "max_tokens") {
+      throw new Error(
+        "The briefing was too long and got cut off. Please try again.",
+      );
+    }
+
     const text = message.content
       .filter((block): block is Anthropic.TextBlock => block.type === "text")
       .map((block) => block.text)
       .join("");
+
+    if (text.trim() === "") {
+      throw new Error("The model returned an empty response. Please try again.");
+    }
 
     const briefing = extractJson(text);
     res.json(briefing);
