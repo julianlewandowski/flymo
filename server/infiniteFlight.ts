@@ -6,6 +6,10 @@ import type { IfFlightImport } from "../shared/types.ts";
 // Request a key by emailing hello@infiniteflight.com.
 const BASE_URL = "https://api.infiniteflight.com/public/v2";
 
+// An import fans out to several Live API calls; bound each so a slow IF server
+// can't hang the whole request. 8s is generous for these small JSON responses.
+const REQUEST_TIMEOUT_MS = 8000;
+
 /** Every Live API response is wrapped in this envelope; errorCode 0 == OK. */
 interface Envelope<T> {
   errorCode: number;
@@ -78,7 +82,14 @@ function getApiKey(): string {
 async function ifGet<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { Authorization: `Bearer ${getApiKey()}` },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }).catch((err: Error) => {
+    if (err.name === "TimeoutError") {
+      throw new IfError(
+        "Infinite Flight took too long to respond. Please try again.",
+        504,
+      );
+    }
     throw new IfError(`Could not reach Infinite Flight: ${err.message}`, 502);
   });
 
