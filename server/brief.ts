@@ -27,22 +27,49 @@ function reqStr(body: Record<string, unknown>, key: string): string {
   return v.trim();
 }
 
-/** Throws if the field is not a finite, positive-ish number. */
-function reqNum(body: Record<string, unknown>, key: string): number {
+/** Optional inclusive bounds for a numeric field. */
+interface Range {
+  min?: number;
+  max?: number;
+}
+
+/** Throw if a finite number falls outside the given inclusive range. */
+function assertRange(key: string, n: number, range?: Range): void {
+  if (range?.min != null && n < range.min) {
+    throw new Error(`${key} must be at least ${range.min}`);
+  }
+  if (range?.max != null && n > range.max) {
+    throw new Error(`${key} must be at most ${range.max}`);
+  }
+}
+
+/** Throws if the field is missing, not a finite number, or out of range. */
+function reqNum(
+  body: Record<string, unknown>,
+  key: string,
+  range?: Range,
+): number {
   const v = body[key];
   const n = typeof v === "number" ? v : Number(v);
   if (!Number.isFinite(n)) {
     throw new Error(`Missing or invalid number: ${key}`);
   }
+  assertRange(key, n, range);
   return n;
 }
 
-/** Optional number — returns undefined when absent/blank. */
-function optNum(body: Record<string, unknown>, key: string): number | undefined {
+/** Optional number — returns undefined when absent/blank; range-checked if present. */
+function optNum(
+  body: Record<string, unknown>,
+  key: string,
+  range?: Range,
+): number | undefined {
   const v = body[key];
   if (v === undefined || v === null || v === "") return undefined;
   const n = Number(v);
-  return Number.isFinite(n) ? n : undefined;
+  if (!Number.isFinite(n)) return undefined;
+  assertRange(key, n, range);
+  return n;
 }
 
 /** Validate and normalize the raw request body into a BriefRequest. */
@@ -57,18 +84,31 @@ function parseInput(body: Record<string, unknown>): BriefRequest {
     departureIcao: reqStr(body, "departureIcao").toUpperCase(),
     arrivalIcao: reqStr(body, "arrivalIcao").toUpperCase(),
     departureRunway: reqStr(body, "departureRunway").toUpperCase(),
-    departureRunwayLengthFt: reqNum(body, "departureRunwayLengthFt"),
-    departureElevationFt: optNum(body, "departureElevationFt"),
+    departureRunwayLengthFt: reqNum(body, "departureRunwayLengthFt", {
+      min: 1,
+      max: 30000,
+    }),
+    departureElevationFt: optNum(body, "departureElevationFt", {
+      min: -1500,
+      max: 30000,
+    }),
     arrivalRunway: reqStr(body, "arrivalRunway").toUpperCase(),
-    arrivalRunwayLengthFt: reqNum(body, "arrivalRunwayLengthFt"),
-    arrivalElevationFt: optNum(body, "arrivalElevationFt"),
+    arrivalRunwayLengthFt: reqNum(body, "arrivalRunwayLengthFt", {
+      min: 1,
+      max: 30000,
+    }),
+    arrivalElevationFt: optNum(body, "arrivalElevationFt", {
+      min: -1500,
+      max: 30000,
+    }),
     aircraftType: reqStr(body, "aircraftType"),
     airline: reqStr(body, "airline"),
-    weightTonnes: reqNum(body, "weightTonnes"),
-    oatC: reqNum(body, "oatC"),
+    // 0.1 t covers light GA (in tonnes); 600 t clears the A380's MTOW.
+    weightTonnes: reqNum(body, "weightTonnes", { min: 0.1, max: 600 }),
+    oatC: reqNum(body, "oatC", { min: -90, max: 60 }),
     runwayCondition: condition,
-    windDirectionDeg: optNum(body, "windDirectionDeg"),
-    windSpeedKt: optNum(body, "windSpeedKt"),
+    windDirectionDeg: optNum(body, "windDirectionDeg", { min: 0, max: 360 }),
+    windSpeedKt: optNum(body, "windSpeedKt", { min: 0, max: 250 }),
     cruisePreference:
       cruisePref === "fast" || cruisePref === "economy"
         ? cruisePref
