@@ -2,12 +2,21 @@ import { useState } from "react";
 import type { Briefing, BriefRequest } from "../shared/types.ts";
 import { generateBriefing } from "./api.ts";
 import BriefingForm from "./components/BriefingForm.tsx";
+import BriefingHistory from "./components/BriefingHistory.tsx";
 import BriefingView from "./components/BriefingView.tsx";
+import {
+  addToHistory,
+  clearHistory,
+  loadHistory,
+  removeFromHistory,
+  type HistoryEntry,
+} from "./lib/history.ts";
 
 export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [briefing, setBriefing] = useState<Briefing | null>(null);
+  const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
 
   async function handleSubmit(req: BriefRequest) {
     setLoading(true);
@@ -15,12 +24,19 @@ export default function App() {
     try {
       const result = await generateBriefing(req);
       setBriefing(result);
+      setHistory(addToHistory(result));
     } catch (err) {
       setError((err as Error).message);
       setBriefing(null);
     } finally {
       setLoading(false);
     }
+  }
+
+  /** Recall a saved briefing into the main view (no API round-trip). */
+  function handleSelectHistory(entry: HistoryEntry) {
+    setError(null);
+    setBriefing(entry.briefing);
   }
 
   return (
@@ -36,6 +52,17 @@ export default function App() {
         </header>
 
         <BriefingForm onSubmit={handleSubmit} loading={loading} />
+
+        {history.length > 0 && (
+          <div className="mt-4">
+            <BriefingHistory
+              entries={history}
+              onSelect={handleSelectHistory}
+              onRemove={(id) => setHistory(removeFromHistory(id))}
+              onClear={() => setHistory(clearHistory())}
+            />
+          </div>
+        )}
 
         {error && (
           <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">

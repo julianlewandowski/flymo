@@ -1,5 +1,21 @@
 import type { Briefing } from "../../shared/types.ts";
 
+/**
+ * A filesystem-safe filename for downloading a briefing, derived from the
+ * route and aircraft (e.g. "flymo-LPFR-EIDW-A330-300.txt"). Falls back to a
+ * generic name if the briefing is missing those fields.
+ */
+export function briefingFilename(b: Briefing): string {
+  const slug = (s: string) => s.trim().replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const route = b.summaryLine.match(/\b([A-Z]{4})\b.*?\b([A-Z]{4})\b/);
+  const parts = [
+    "flymo",
+    route ? `${route[1]}-${route[2]}` : "",
+    slug(b.aircraft.type),
+  ].filter(Boolean);
+  return `${parts.join("-") || "flymo-briefing"}.txt`;
+}
+
 /** Render a briefing as a plain-text block for the "Copy briefing" button. */
 export function briefingToText(b: Briefing): string {
   const L: string[] = [];

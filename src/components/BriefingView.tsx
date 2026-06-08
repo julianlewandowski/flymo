@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Briefing, Reasoning } from "../../shared/types.ts";
-import { briefingToText } from "../lib/copyBriefing.ts";
+import { briefingFilename, briefingToText } from "../lib/copyBriefing.ts";
 import BriefingCard from "./BriefingCard.tsx";
 import Stat from "./Stat.tsx";
 
@@ -24,18 +24,42 @@ export default function BriefingView({ briefing: b }: BriefingViewProps) {
     }
   }
 
+  /** Download the briefing as a plain-text file named after the route. */
+  function download() {
+    const blob = new Blob([briefingToText(b)], {
+      type: "text/plain;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = briefingFilename(b);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-3">
       {/* Pinned one-line summary + copy action */}
       <div className="flex items-center justify-between gap-3 rounded-xl border border-cockpit-amber/40 bg-cockpit-amber/10 px-4 py-3">
         <p className="text-sm text-cockpit-amber">{b.summaryLine}</p>
-        <button
-          type="button"
-          onClick={copy}
-          className="shrink-0 rounded-md border border-cockpit-amber/50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-cockpit-amber hover:bg-cockpit-amber/20"
-        >
-          {copied ? "Copied ✓" : "Copy briefing"}
-        </button>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={copy}
+            className="rounded-md border border-cockpit-amber/50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-cockpit-amber hover:bg-cockpit-amber/20"
+          >
+            {copied ? "Copied ✓" : "Copy briefing"}
+          </button>
+          <button
+            type="button"
+            onClick={download}
+            className="rounded-md border border-cockpit-amber/50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-cockpit-amber hover:bg-cockpit-amber/20"
+          >
+            Download
+          </button>
+        </div>
       </div>
 
       <ReasoningPanel reasoning={b.reasoning} />
