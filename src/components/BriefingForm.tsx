@@ -33,6 +33,26 @@ interface FormState {
   cruisePreference: CruisePreference;
 }
 
+// Keys we round-trip through the URL so a flight setup can be shared/bookmarked.
+const SHARE_KEYS = [
+  "departureIcao",
+  "arrivalIcao",
+  "departureRunway",
+  "departureRunwayLengthFt",
+  "departureElevationFt",
+  "arrivalRunway",
+  "arrivalRunwayLengthFt",
+  "arrivalElevationFt",
+  "aircraftType",
+  "airline",
+  "weightTonnes",
+  "oatC",
+  "runwayCondition",
+  "windDirectionDeg",
+  "windSpeedKt",
+  "cruisePreference",
+] as const satisfies ReadonlyArray<keyof FormState>;
+
 // Sensible defaults so the user can hit "Generate" immediately (LPFR -> EIDW).
 const DEFAULTS: FormState = {
   departureIcao: "LPFR",
@@ -106,8 +126,36 @@ function importSummary(imp: IfFlightImport): string {
     : `Found your flight${where}, but no details were available to import.`;
 }
 
+/** Read a shared flight setup from the page URL, overlaid on DEFAULTS. */
+function formFromUrl(): FormState {
+  if (typeof window === "undefined") return DEFAULTS;
+  const params = new URLSearchParams(window.location.search);
+  const next = { ...DEFAULTS } as Record<keyof FormState, string>;
+  let touched = false;
+  for (const key of SHARE_KEYS) {
+    const v = params.get(key);
+    if (v != null) {
+      next[key] = v;
+      touched = true;
+    }
+  }
+  return touched ? (next as FormState) : DEFAULTS;
+}
+
+/** Build an absolute, shareable URL that restores the given form state. */
+function urlForForm(form: FormState): string {
+  const params = new URLSearchParams();
+  for (const key of SHARE_KEYS) {
+    const v = form[key];
+    if (v != null && String(v).trim() !== "") params.set(key, String(v));
+  }
+  const { origin, pathname } = window.location;
+  return `${origin}${pathname}?${params.toString()}`;
+}
+
 export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
-  const [form, setForm] = useState<FormState>(DEFAULTS);
+  const [form, setForm] = useState<FormState>(formFromUrl);
+  const [shared, setShared] = useState(false);
   const [ifUsername, setIfUsername] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -131,6 +179,20 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
       setImportError((err as Error).message);
     } finally {
       setImporting(false);
+    }
+  }
+
+  /** Copy a shareable link that restores the current form to the clipboard. */
+  async function handleShare() {
+    try {
+      const url = urlForForm(form);
+      await navigator.clipboard.writeText(url);
+      // Reflect the shared setup in the address bar without reloading.
+      window.history.replaceState(null, "", url);
+      setShared(true);
+      setTimeout(() => setShared(false), 1500);
+    } catch {
+      setShared(false);
     }
   }
 
@@ -410,13 +472,23 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="mt-5 w-full rounded-md bg-cockpit-amber px-4 py-3 text-sm font-bold uppercase tracking-wider text-cockpit-bg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {loading ? "Computing…" : "Generate Briefing"}
-      </button>
+      <div className="mt-5 flex gap-2">
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex-1 rounded-md bg-cockpit-amber px-4 py-3 text-sm font-bold uppercase tracking-wider text-cockpit-bg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? "Computing…" : "Generate Briefing"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleShare()}
+          title="Copy a link that restores this flight setup"
+          className="shrink-0 rounded-md border border-cockpit-cyan/60 px-4 py-3 text-xs font-bold uppercase tracking-wider text-cockpit-cyan transition hover:bg-cockpit-cyan/10"
+        >
+          {shared ? "Link copied ✓" : "Share link"}
+        </button>
+      </div>
     </form>
   );
 }
