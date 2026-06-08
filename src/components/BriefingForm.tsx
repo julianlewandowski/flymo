@@ -7,6 +7,11 @@ import type {
 } from "../../shared/types.ts";
 import { IF_AIRCRAFT } from "../../shared/aircraftCatalog.ts";
 import { importFromInfiniteFlight } from "../api.ts";
+import {
+  describeComponents,
+  parseRunwayHeading,
+  windComponents,
+} from "../lib/windComponents.ts";
 
 interface BriefingFormProps {
   onSubmit: (req: BriefRequest) => void;
@@ -470,6 +475,13 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
             />
           </div>
         </div>
+
+        <WindReadout
+          windDirectionDeg={form.windDirectionDeg}
+          windSpeedKt={form.windSpeedKt}
+          departureRunway={form.departureRunway}
+          arrivalRunway={form.arrivalRunway}
+        />
       </div>
 
       <div className="mt-5 flex gap-2">
@@ -490,5 +502,70 @@ export default function BriefingForm({ onSubmit, loading }: BriefingFormProps) {
         </button>
       </div>
     </form>
+  );
+}
+
+interface WindReadoutProps {
+  windDirectionDeg: string;
+  windSpeedKt: string;
+  departureRunway: string;
+  arrivalRunway: string;
+}
+
+/** One "DEP RWY 10  HW 12 · XW 8 from right" row, or null if not computable. */
+function runwayRow(label: string, runway: string, dir: number, speed: number) {
+  const heading = parseRunwayHeading(runway);
+  if (heading == null) return null;
+  const c = windComponents(heading, dir, speed);
+  return (
+    <div key={label} className="flex items-baseline justify-between gap-3">
+      <span className="uppercase tracking-wider text-cockpit-muted/70">
+        {label} RWY {runway.trim().toUpperCase()}
+      </span>
+      <span
+        className={`tabular-nums ${c.headwind < 0 ? "text-cockpit-amber" : "text-cockpit-green"}`}
+      >
+        {describeComponents(c)}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Live headwind/crosswind readout derived from the entered wind and runways.
+ * Tailwind components are highlighted amber as a caution. Hidden until both a
+ * wind direction and speed are present.
+ */
+function WindReadout({
+  windDirectionDeg,
+  windSpeedKt,
+  departureRunway,
+  arrivalRunway,
+}: WindReadoutProps) {
+  const dir = Number(windDirectionDeg);
+  const speed = Number(windSpeedKt);
+  const hasWind =
+    windDirectionDeg.trim() !== "" &&
+    windSpeedKt.trim() !== "" &&
+    Number.isFinite(dir) &&
+    Number.isFinite(speed) &&
+    speed > 0;
+  if (!hasWind) return null;
+
+  const rows = [
+    runwayRow("Dep", departureRunway, dir, speed),
+    runwayRow("Arr", arrivalRunway, dir, speed),
+  ].filter(Boolean);
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="sm:col-span-2">
+      <div className="rounded-lg border border-cockpit-border bg-cockpit-bg/40 px-3 py-2">
+        <p className="mb-1 text-[10px] uppercase tracking-wider text-cockpit-muted">
+          Wind components @ {Math.round(dir)}° / {Math.round(speed)} kt
+        </p>
+        <div className="space-y-0.5 text-[11px]">{rows}</div>
+      </div>
+    </div>
   );
 }
